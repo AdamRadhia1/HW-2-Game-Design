@@ -9,8 +9,8 @@ class Road {
     this.houses = [];
     let y = 0;
     for (let i = 0; i < 12; i++) {
-      this.houses.push(new House(true, y, this.margin));
-      this.houses.push(new House(false, y, this.margin));
+      this.houses.push(new House(true, y, this.roadWidth));
+      this.houses.push(new House(false, y, this.roadWidth));
       y += 120;
     }
   }
@@ -45,10 +45,10 @@ class Road {
 }
 
 class House {
-  constructor(leftSide, startY, marginRef) {
+  constructor(leftSide, startY, roadWidth) {
     this.leftSide = leftSide;
     this.y = startY;
-    this.marginRef = marginRef;
+    this.roadWidth = roadWidth;
     this.randomize();
     this.position();
   }
@@ -63,9 +63,10 @@ class House {
 
   position() {
     let pad = 10;
+    let margin = (width - this.roadWidth) / 2;
     this.x = this.leftSide
-      ? random(pad, this.marginRef - this.w - pad)
-      : random(width - this.marginRef + pad, width - this.w - pad);
+      ? random(pad, margin - this.w - pad)
+      : random(width - margin + pad, width - this.w - pad);
   }
 
   reset(newY) {
@@ -149,5 +150,6 @@ class Cloud {
     ellipse(this.x - 25, this.y + 5, 50, 30);
   }
 }
+
 
 
