@@ -1,26 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Ghost Runner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<title>Ghost Runner</title>
 
-  <!-- p5 core + sound -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+<!-- p5 core -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
 
-  <!-- Game Files -->
-  <script src="Ball.js"></script>
-  <script src="Road.js"></script>
-  <script src="sketch.js"></script>
+<!-- p5 sound -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
 
-  <style>
-    html, body {
-      margin:0; padding:0;
-      background:black; overflow:hidden;
-    }
-    canvas { display:block; margin:0 auto; }
-  </style>
+<!-- Game Files Load Order -->
+<script src="Ball.js"></script>
+<script src="Road.js"></script>
+<script src="sketch.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+  }
+  canvas {
+    display: block;
+    margin: auto;
+  }
+</style>
 </head>
 <body></body>
 </html>
