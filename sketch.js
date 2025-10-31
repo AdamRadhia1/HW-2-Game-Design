@@ -1,4 +1,4 @@
-/* Ghost Runner —  
+/* Ghost Runner — FINAL (Option B) 
    - Start screen with instructions
    - Tap/Space starts countdown + fades-in music
    - Tap/Space pauses during play
@@ -347,6 +347,7 @@ class Cloud {
     ellipse(this.x - 25, this.y + 5, 50, 30);
   }
 }
+
 
 
 
