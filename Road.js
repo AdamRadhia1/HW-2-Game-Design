@@ -1,137 +1,167 @@
 class Road {
-  constructor(){
-    this.roadWidth = width*0.5;
-    this.margin=(width-this.roadWidth)/2;
-    this.leftGutterX=this.margin;
-    this.rightGutterX=this.margin+this.roadWidth;
-    this.stripeOffsetY=0;
+  constructor() {
+    this.roadWidth = width / 3;
+    this.margin = (width - this.roadWidth) / 2;
+    this.leftGutterX = this.margin;
+    this.rightGutterX = this.margin + this.roadWidth;
+    this.stripeOffsetY = 0;
 
-    this.houses=[];
-    let y=0;
-    for(let i=0;i<12;i++){
-      this.houses.push(new House(true,y,this.roadWidth));
-      this.houses.push(new House(false,y,this.roadWidth));
-      y+=120;
+    this.houses = [];
+    this.clouds = [];
+
+    let y = 0;
+    for (let i = 0; i < 12; i++) {
+      this.houses.push(new House(true, y, this.margin));
+      this.houses.push(new House(false, y, this.margin));
+      y += 120;
+    }
+
+    // add clouds
+    for (let i = 0; i < 5; i++) {
+      this.clouds.push(new Cloud(random(width), random(50,200), random(0.6,1.2)));
     }
   }
 
-  update(){
-    let s=max(5, baseSpeed+distance/300);
-    this.stripeOffsetY=(this.stripeOffsetY+s)%40;
+  update() {
+    let s = max(5, baseSpeed + distance / 300);
+    this.stripeOffsetY = (this.stripeOffsetY + s) % 40;
 
-    for(let h of this.houses){
-      h.y+=s;
-      if(h.y>height+80) h.reset(-random(100,200));
+    for (let h of this.houses) {
+      h.y += s;
+      if (h.y > height + 80) h.reset(-random(100, 200));
       h.updateBubble();
     }
 
-    let darkness=lerp(1,0.2,nightFade);
-    this.roadColor=color(250*darkness,199*darkness,179*darkness);
+    for (let c of this.clouds) c.update();
+
+    let d = lerp(1,0.25, nightFade);
+    this.roadColor = color(250*d,199*d,179*d);
   }
 
-  display(){
-    noStroke(); fill(this.roadColor);
-    rect(this.margin,0,this.roadWidth,height);
+  display() {
+    // sky
+    background(170 * (1-nightFade), 150 * (1-nightFade), 200);
 
-    stroke(255); strokeWeight(3);
-    for(let y=int(this.stripeOffsetY);y<height;y+=40){
-      line(width/2,y,width/2,y+20);
-    }
+    // clouds
+    for (let c of this.clouds) c.display();
 
-    for(let h of this.houses) h.display(false);
+    // houses behind road
+    for (let h of this.houses) h.display(false);
 
-    const arrLeft=[], arrRight=[];
-    let bubbles=[];
-    for(let h of this.houses) if(h.showBubble){
-      let tw=textWidth(h.msg)+16;
-      let bx=h.x+h.w/2-tw/2;
-      let by=h.y-35;
-      bubbles.push({house:h,x:bx,y:by,left:h.leftSide});
-    }
+    // road
+    fill(this.roadColor);
+    noStroke();
+    rect(this.margin, 0, this.roadWidth, height);
 
-    bubbles.sort((a,b)=>a.y-b.y);
-    for(let b of bubbles){
-      let arr = b.left ? arrLeft : arrRight;
-      let overlap = arr.some(d=>abs(b.y-d.y)<28);
-      if(!overlap){ b.house.drawBubble(); arr.push({y:b.y}); }
-    }
+    stroke(255);
+    strokeWeight(3);
+    for (let y = int(this.stripeOffsetY); y < height; y += 40)
+      line(width / 2, y, width / 2, y + 20);
+
+    // houses bubbles on top
+    for (let h of this.houses) h.display(true);
   }
 }
 
+// 🏠 House
 class House {
-  constructor(left,startY,roadW){
-    this.leftSide=left; this.y=startY; this.roadWidth=roadW;
-    this.showBubble=false; this.msg=""; this.timer=0;
-    this.randomize(); this.position();
+  constructor(leftSide, startY, marginRef) {
+    this.leftSide = leftSide;
+    this.y = startY;
+    this.marginRef = marginRef;
+    this.randomize();
+    this.position();
   }
 
-  randomize(){
-    this.w=random(50,80);
-    this.h=random(60,110);
-    this.body=color(random(180,255),random(120,255),random(120,255));
-    this.roof=lerpColor(this.body,color(0),0.35);
-    this.window=color(255,255,random(120,210));
+  randomize() {
+    this.w = random(50, 80);
+    this.h = random(60, 110);
+    this.body = color(random(180,255), random(120,255), random(120,255));
+    this.roof = lerpColor(this.body, color(0), 0.35);
+    this.window = color(255, 255, random(110,210));
   }
 
-  position(){
-    let pad=10, margin=(width-this.roadWidth)/2;
-    this.x=this.leftSide ? random(pad,margin-this.w-pad)
-                         : random(width-margin+pad,width-this.w-pad);
+  position() {
+    let pad = 18;
+    this.x = this.leftSide
+      ? random(pad, this.marginRef - this.w - pad)
+      : random(width - this.marginRef + pad, width - this.w - pad);
   }
 
-  reset(y){ this.y=y; this.randomize(); this.position(); this.showBubble=false; this.timer=0; }
+  reset(y) {
+    this.y = y;
+    this.randomize();
+    this.position();
+    this.showBubble = false;
+    this.timer = 0;
+  }
 
-  updateBubble(){
-    if(!this.showBubble && random(1)<0.002){
-      let lines=[
+  updateBubble() {
+    if (!this.showBubble && random() < 0.0018) {
+      let chatter = [
         "Did you see that ghost!",
         "Someone catch that ghost!",
-        "Halloween is getting too scary!",
-        "No way that's a real ghost!",
-        "Mommy can I pet the ghost?",
-        "Oh shoot!",
         "Not Halloween being Halloween!",
-        "911 I see a ghost!",
+        "911, I see a ghost outside!",
         "That ghost has moves!",
-        "Close the curtains!",
-        "Who you gonna call?!",
-        "I'm out!",
-        "That ghost bold!"
+        "Close the curtains!"
       ];
-      this.msg=lines[int(random(lines.length))];
-      this.timer=int(random(120,240));
-      this.showBubble=true;
+      this.msg = chatter[int(random(chatter.length))];
+      this.showBubble = true;
+      this.timer = 150;
+    } else if (this.showBubble) {
+      this.timer--;
+      if (this.timer <= 0) this.showBubble = false;
     }
-    if(this.showBubble) this.timer--;
-    if(this.timer<=0) this.showBubble=false;
   }
 
-  display(pass){
-    if(!pass){
-      noStroke(); fill(this.body);
-      rect(this.x,this.y,this.w,this.h);
+  display(bubblePass) {
+    if (!bubblePass) {
+      fill(this.body);
+      noStroke();
+      rect(this.x, this.y, this.w, this.h);
       fill(this.roof);
-      triangle(this.x,this.y,this.x+this.w/2,this.y-25,this.x+this.w,this.y);
+      triangle(this.x, this.y, this.x + this.w/2, this.y-22, this.x + this.w, this.y);
       fill(this.window);
-      let s=this.w/4;
-      rect(this.x+s, this.y+this.h/3,15,15,3);
-      rect(this.x+2*s,this.y+this.h/3,15,15,3);
-      rect(this.x+s, this.y+2*this.h/3-8,15,15,3);
-      rect(this.x+2*s,this.y+2*this.h/3-8,15,15,3);
+      rect(this.x + 12, this.y + 18, 15, 15, 4);
+      rect(this.x + this.w - 27, this.y + 18, 15, 15, 4);
+      rect(this.x + 12, this.y + this.h - 35, 15, 15, 4);
+      rect(this.x + this.w - 27, this.y + this.h - 35, 15, 15, 4);
+    } 
+    else if (this.showBubble) {
+      push();
+      textSize(12);
+      let tw = textWidth(this.msg) + 20;
+      fill(255);
+      stroke(0);
+      strokeWeight(2);
+      rect(this.x + this.w/2 - tw/2, this.y - 28, tw, 22, 12);
+      fill(0);
+      noStroke();
+      textAlign(CENTER,CENTER);
+      text(this.msg, this.x + this.w/2, this.y - 18);
+      pop();
     }
-  }
-
-  drawBubble(){
-    if(!this.showBubble) return;
-    let tw=textWidth(this.msg)+16;
-    let bx=this.x+this.w/2-tw/2;
-    let by=this.y-35;
-    stroke(0,130); strokeWeight(1);
-    fill(255,240);
-    rect(bx,by,tw,24,10);
-    noStroke(); fill(0);
-    textAlign(CENTER,CENTER); textSize(12);
-    text(this.msg,this.x+this.w/2,this.y-23);
   }
 }
 
+// ☁️ Cloud
+class Cloud {
+  constructor(x,y,s){
+    this.x=x; this.y=y; this.s=s;
+  }
+  update(){
+    this.x += 0.3*this.s;
+    if(this.x>width+80){
+      this.x=-80;
+      this.y=random(50,250);
+    }
+  }
+  display(){
+    noStroke();
+    fill(255,240);
+    ellipse(this.x,this.y,60,40);
+    ellipse(this.x+22,this.y+5,50,30);
+    ellipse(this.x-22,this.y+5,50,30);
+  }
+}
