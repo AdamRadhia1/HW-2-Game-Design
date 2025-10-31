@@ -134,3 +134,4 @@ class House {
     text(this.msg,this.x+this.w/2,this.y-23);
   }
 }
+
