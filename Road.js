@@ -15,7 +15,7 @@ class Road {
     }
   }
 
-  update() {
+  update(darkMode) {
     const s = max(5, baseSpeed + distance / 300.0);
     this.stripeOffsetY = (this.stripeOffsetY + s) % 40;
 
@@ -25,12 +25,8 @@ class Road {
       h.updateBubble();
     }
 
-    // pastel road that darkens at night
-    this.roadColor = color(
-      lerp(250, 50, nightFade),
-      lerp(199, 50, nightFade),
-      lerp(179, 40, nightFade)
-    );
+    const darkness = lerp(1, 0.2, nightFade);
+    this.roadColor = color(250 * darkness, 199 * darkness, 179 * darkness);
   }
 
   display() {
@@ -38,31 +34,42 @@ class Road {
     noStroke(); fill(this.roadColor);
     rect(this.margin, 0, this.roadWidth, height);
 
-    // center stripes
+    // stripes
     stroke(255); strokeWeight(3);
     for (let y = int(this.stripeOffsetY); y < height; y += 40) {
       line(width/2, y, width/2, y + 20);
     }
 
-    // houses (under speech bubbles)
+    // houses beneath bubbles
     for (let h of this.houses) h.display(false);
 
-    // collect bubbles and prevent overlaps per side + clamp inside side area
-    const bubbles = [];
-    for (let h of this.houses) if (h.showBubble) bubbles.push(h);
-    bubbles.sort((a,b)=> a.y - b.y);
+    // bubble placement logic
+    const bubbleItems = [];
+    for (let h of this.houses) {
+      if (h.showBubble) {
+        const tw = textWidth(h.msg) + 16;
+        let bx = h.x + h.w/2 - tw/2;
+        const by = h.y - 35;
 
-    const drawnLeft = [];
-    const drawnRight = [];
+        bubbleItems.push({ house:h, x:bx, y:by, w:tw, h:24, left:h.leftSide });
+      }
+    }
 
-    for (let h of bubbles) {
-      const side = h.leftSide ? drawnLeft : drawnRight;
-      let overlaps = side.some(y => abs(h.y - y) < 28);
-      if (overlaps) continue;
+    bubbleItems.sort((a,b)=> a.y - b.y);
 
-      // draw crisp bubble (with clamping)
-      h.drawBubbleCrisp(this.margin, this.roadWidth);
-      side.push(h.y);
+    const leftDraw  = [];
+    const rightDraw = [];
+
+    for (let item of bubbleItems) {
+      const arr = item.left ? leftDraw : rightDraw;
+      let overlap = false;
+      for (let d of arr) {
+        if (abs(item.y - d.y) < 30) { overlap = true; break; }
+      }
+      if (!overlap) {
+        item.house.drawBubbleCrisp();
+        arr.push({ y:item.y });
+      }
     }
   }
 }
@@ -107,23 +114,23 @@ class House {
 
   updateBubble() {
     if (!this.showBubble && random(1) < 0.002) {
+      this.showBubble = true;
       const chatter = [
         "Did you see that ghost!",
         "Someone catch that ghost!",
-        "Halloween is getting too scary!",
         "No way that's a real ghost!",
-        "Mommy can I go pet the ghost?",
+        "Halloween is getting wild!",
+        "Mom, there's a ghost!",
         "Oh shoot!",
         "Not Halloween being Halloween!",
-        "911, I see a ghost!",
+        "911 I see a ghost!",
         "That ghost has moves!",
         "Close the curtains!",
         "Who you gonna call?!",
         "I'm outta here!",
         "That's one bold ghost!"
       ];
-      this.msg = random(chatter);
-      this.showBubble = true;
+      this.msg = chatter[int(random(chatter.length))];
       this.timer = int(random(120, 240));
     }
     if (this.showBubble) this.timer--;
@@ -136,42 +143,40 @@ class House {
       rect(this.x, this.y, this.w, this.h);
       fill(this.roof);
       triangle(this.x, this.y, this.x + this.w/2, this.y - 25, this.x + this.w, this.y);
-
-      // windows
-      fill(this.window); noStroke();
-      const s = this.w/4;
-      rect(this.x + s,       this.y + this.h/3,     15, 15, 3);
-      rect(this.x + 2*s,     this.y + this.h/3,     15, 15, 3);
-      rect(this.x + s,       this.y + 2*this.h/3-8, 15, 15, 3);
-      rect(this.x + 2*s,     this.y + 2*this.h/3-8, 15, 15, 3);
+      fill(this.window);
+      const spacing = this.w/4;
+      rect(this.x + spacing,     this.y + this.h/3,     15, 15, 3);
+      rect(this.x + 2*spacing,   this.y + this.h/3,     15, 15, 3);
+      rect(this.x + spacing,     this.y + 2*this.h/3-8, 15, 15, 3);
+      rect(this.x + 2*spacing,   this.y + 2*this.h/3-8, 15, 15, 3);
     }
   }
 
-  // clamp bubbles to side area so they never cross the road
   drawBubbleCrisp() {
-  if (!this.showBubble) return;
+    if (!this.showBubble) return;
 
-  const tw = textWidth(this.msg) + 16;
-  let bx = this.x + this.w/2 - tw/2;
-  const by = this.y - 35;
+    const tw = textWidth(this.msg) + 16;
+    let bx = this.x + this.w/2 - tw/2;
+    const by = this.y - 35;
 
-  const margin = (width - this.roadWidth) / 2;
+    const margin = (width - this.roadWidth) / 2;
 
-  // Keep bubble out of the road
-  if (this.leftSide) {
-    bx = min(bx, margin - tw - 6);
-  } else {
-    bx = max(bx, width - margin + 6);
+    if (this.leftSide) {
+      bx = min(bx, margin - tw - 6);
+    } else {
+      bx = max(bx, width - margin + 6);
+    }
+
+    stroke(0, 140);
+    strokeWeight(1);
+    fill(255, 245);
+    rect(bx, by, tw, 24, 10);
+
+    noStroke();
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(12);
+    text(this.msg, bx + tw/2, by + 12);
   }
-
-  stroke(0, 140);
-  strokeWeight(1);
-  fill(255, 245);
-  rect(bx, by, tw, 24, 10);
-
-  noStroke();
-  fill(0);
-  textAlign(CENTER, CENTER);
-  textSize(12);
-  text(this.msg, bx + tw/2, by + 12);
 }
+
