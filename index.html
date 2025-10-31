@@ -5,32 +5,24 @@
   <title>Ghost Runner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 
+  <!-- p5 core + p5.sound -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
 
+  <!-- game files (order matters) -->
   <script src="Ball.js"></script>
   <script src="Road.js"></script>
   <script src="sketch.js"></script>
 
   <style>
-    html, body { 
-      margin:0; padding:0; background:#000; overflow:hidden; 
-      touch-action: none; 
-    }
+    html, body { margin:0; padding:0; background:#000; overflow:hidden; }
     canvas { display:block; margin:0 auto; }
-    #soundHint {
-      position: fixed; left: 50%; transform: translateX(-50%);
-      bottom: 14px; padding: 8px 12px; border-radius: 10px;
-      background: rgba(0,0,0,0.55); color: #fff; font: 14px system-ui;
-      display: none; cursor: pointer; user-select: none;
-      border: 1px solid rgba(255,255,255,0.25);
-    }
   </style>
 </head>
-<body>
-  <div id="soundHint">🔊 Tap to enable sound</div>
-</body>
+<body></body>
 </html>
+
+
 
 
 
