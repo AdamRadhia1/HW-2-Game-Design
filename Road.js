@@ -148,34 +148,30 @@ class House {
   }
 
   // clamp bubbles to side area so they never cross the road
-  drawBubbleCrisp(margin, roadW) {
-    if (!this.showBubble) return;
+  drawBubbleCrisp() {
+  if (!this.showBubble) return;
 
-    const tw = textWidth(this.msg) + 16;
-    const sideLeftMin  = 10;
-    const sideLeftMax  = margin - 10 - tw;
-    const sideRightMin = width - margin + 10;
-    const sideRightMax = width - 10 - tw;
+  const tw = textWidth(this.msg) + 16;
+  let bx = this.x + this.w/2 - tw/2;
+  const by = this.y - 35;
 
-    let bx = this.x + this.w/2 - tw/2;
-    const by = this.y - 35;
+  const margin = (width - this.roadWidth) / 2;
 
-    if (this.leftSide) {
-      bx = constrain(bx, sideLeftMin, max(sideLeftMin, sideLeftMax));
-    } else {
-      bx = constrain(bx, sideRightMin, max(sideRightMin, sideRightMax));
-    }
-
-    stroke(0, 140); strokeWeight(1);
-    fill(255, 245);
-    rect(bx, by, tw, 24, 10);
-
-    noStroke(); fill(0);
-    textAlign(CENTER, CENTER);
-    textSize(12);
-    text(this.msg, bx + tw/2, this.y - 23);
+  // Keep bubble out of the road
+  if (this.leftSide) {
+    bx = min(bx, margin - tw - 6);
+  } else {
+    bx = max(bx, width - margin + 6);
   }
+
+  stroke(0, 140);
+  strokeWeight(1);
+  fill(255, 245);
+  rect(bx, by, tw, 24, 10);
+
+  noStroke();
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(12);
+  text(this.msg, bx + tw/2, by + 12);
 }
-
-
-
