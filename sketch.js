@@ -329,3 +329,4 @@ class Cloud {
     ellipse(this.x - 25, this.y + 5, 50, 30);
   }
 }
+
