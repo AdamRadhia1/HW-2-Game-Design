@@ -15,7 +15,7 @@ class Road {
     }
   }
 
-  update(darkMode) {
+  update() {
     const s = max(5, baseSpeed + distance / 300.0);
     this.stripeOffsetY = (this.stripeOffsetY + s) % 40;
 
@@ -25,8 +25,12 @@ class Road {
       h.updateBubble();
     }
 
-    const darkness = lerp(1, 0.2, nightFade);
-    this.roadColor = color(250 * darkness, 199 * darkness, 179 * darkness);
+    // pastel road that darkens at night
+    this.roadColor = color(
+      lerp(250, 50, nightFade),
+      lerp(199, 50, nightFade),
+      lerp(179, 40, nightFade)
+    );
   }
 
   display() {
@@ -40,34 +44,25 @@ class Road {
       line(width/2, y, width/2, y + 20);
     }
 
-    // houses (under bubbles)
+    // houses (under speech bubbles)
     for (let h of this.houses) h.display(false);
 
-    // collect bubbles, prevent overlaps per side
-    const bubbleItems = [];
-    for (let h of this.houses) if (h.showBubble) {
-      const tw = textWidth(h.msg) + 16;
-      const bx = h.x + h.w/2 - tw/2;
-      const by = h.y - 35;
-      bubbleItems.push({ house:h, x:bx, y:by, w:tw, h:24, left:h.leftSide });
-    }
+    // collect bubbles and prevent overlaps per side + clamp inside side area
+    const bubbles = [];
+    for (let h of this.houses) if (h.showBubble) bubbles.push(h);
+    bubbles.sort((a,b)=> a.y - b.y);
 
-    // sort by y so we accept the first, skip the next if overlapping
-    bubbleItems.sort((a,b)=> a.y - b.y);
-
-    const drawnLeft  = [];
+    const drawnLeft = [];
     const drawnRight = [];
 
-    for (let item of bubbleItems) {
-      const arr = item.left ? drawnLeft : drawnRight;
-      let overlaps = false;
-      for (let d of arr) {
-        if (abs(item.y - d.y) < 28) { overlaps = true; break; }
-      }
-      if (!overlaps) {
-        item.house.drawBubbleCrisp();
-        arr.push({ y:item.y });
-      }
+    for (let h of bubbles) {
+      const side = h.leftSide ? drawnLeft : drawnRight;
+      let overlaps = side.some(y => abs(h.y - y) < 28);
+      if (overlaps) continue;
+
+      // draw crisp bubble (with clamping)
+      h.drawBubbleCrisp(this.margin, this.roadWidth);
+      side.push(h.y);
     }
   }
 }
@@ -112,7 +107,6 @@ class House {
 
   updateBubble() {
     if (!this.showBubble && random(1) < 0.002) {
-      this.showBubble = true;
       const chatter = [
         "Did you see that ghost!",
         "Someone catch that ghost!",
@@ -128,7 +122,8 @@ class House {
         "I'm outta here!",
         "That's one bold ghost!"
       ];
-      this.msg = chatter[int(random(chatter.length))];
+      this.msg = random(chatter);
+      this.showBubble = true;
       this.timer = int(random(120, 240));
     }
     if (this.showBubble) this.timer--;
@@ -137,28 +132,39 @@ class House {
 
   display(bubblePass) {
     if (!bubblePass) {
-      // pastel flat house
       noStroke(); fill(this.body);
       rect(this.x, this.y, this.w, this.h);
       fill(this.roof);
       triangle(this.x, this.y, this.x + this.w/2, this.y - 25, this.x + this.w, this.y);
 
-      // windows (no flicker)
+      // windows
       fill(this.window); noStroke();
-      const spacing = this.w/4;
-      rect(this.x + spacing,     this.y + this.h/3,     15, 15, 3);
-      rect(this.x + 2*spacing,   this.y + this.h/3,     15, 15, 3);
-      rect(this.x + spacing,     this.y + 2*this.h/3-8, 15, 15, 3);
-      rect(this.x + 2*spacing,   this.y + 2*this.h/3-8, 15, 15, 3);
+      const s = this.w/4;
+      rect(this.x + s,       this.y + this.h/3,     15, 15, 3);
+      rect(this.x + 2*s,     this.y + this.h/3,     15, 15, 3);
+      rect(this.x + s,       this.y + 2*this.h/3-8, 15, 15, 3);
+      rect(this.x + 2*s,     this.y + 2*this.h/3-8, 15, 15, 3);
     }
   }
 
-  drawBubbleCrisp() {
+  // clamp bubbles to side area so they never cross the road
+  drawBubbleCrisp(margin, roadW) {
     if (!this.showBubble) return;
-    // clean, thin bubble
+
     const tw = textWidth(this.msg) + 16;
-    const bx = this.x + this.w/2 - tw/2;
+    const sideLeftMin  = 10;
+    const sideLeftMax  = margin - 10 - tw;
+    const sideRightMin = width - margin + 10;
+    const sideRightMax = width - 10 - tw;
+
+    let bx = this.x + this.w/2 - tw/2;
     const by = this.y - 35;
+
+    if (this.leftSide) {
+      bx = constrain(bx, sideLeftMin, max(sideLeftMin, sideLeftMax));
+    } else {
+      bx = constrain(bx, sideRightMin, max(sideRightMin, sideRightMax));
+    }
 
     stroke(0, 140); strokeWeight(1);
     fill(255, 245);
@@ -167,8 +173,9 @@ class House {
     noStroke(); fill(0);
     textAlign(CENTER, CENTER);
     textSize(12);
-    text(this.msg, this.x + this.w/2, this.y - 23);
+    text(this.msg, bx + tw/2, this.y - 23);
   }
 }
+
 
 
