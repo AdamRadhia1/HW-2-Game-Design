@@ -59,3 +59,4 @@ class Ball {
   resetBounce(){ this.bounceVel=0; }
   showMilestone(msg){ this.milestoneText=msg; this.milestoneTimer=60; }
 }
+
