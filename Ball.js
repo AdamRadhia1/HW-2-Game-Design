@@ -10,21 +10,17 @@ class Ball {
   }
 
   update(road) {
-    // follow mouse horizontally
+    // horizontal follow
     this.pos.x = lerp(this.pos.x, mouseX, 0.2);
-
     // constrain to road
     this.pos.x = constrain(this.pos.x, road.leftGutterX, road.rightGutterX);
 
-    // gentle vertical bounce resolution
+    // vertical settle
     this.pos.y += this.bounceVel;
     this.bounceVel += this.gravity;
 
-    const floorY = height - 100;
-    if (this.pos.y > floorY) {
-      this.pos.y = floorY;
-      this.bounceVel = 0;
-    }
+    const floorY = height - 120;
+    if (this.pos.y > floorY) { this.pos.y = floorY; this.bounceVel = 0; }
 
     if (this.milestoneTimer > 0) this.milestoneTimer--;
   }
@@ -32,9 +28,9 @@ class Ball {
   display() {
     push();
 
-    // night glow aura
-    const glow = map(nightFade, 0, 1, 0, 80);
-    noStroke(); fill(255, glow);
+    // glow stronger at night
+    noStroke();
+    fill(255, map(nightFade, 0, 1, 0, 80));
     circle(this.pos.x, this.pos.y, this.radius * 1.9);
 
     // ghost body
@@ -42,28 +38,26 @@ class Ball {
     const w = this.radius * 1.2;
     const h = this.radius * 1.5;
 
-    circle(this.pos.x, this.pos.y - h * 0.25, w); // head
+    circle(this.pos.x, this.pos.y - h*0.25, w); // head
     rectMode(CENTER);
-    rect(this.pos.x, this.pos.y + h * 0.05, w, h * 0.6, 10); // torso
+    rect(this.pos.x, this.pos.y + h*0.05, w, h*0.6, 10); // torso
 
-    // teeth / frill
-    const teeth = 5;
-    const seg = w / teeth;
+    // frill
+    const teeth = 5, seg = w / teeth;
     for (let i = 0; i < teeth; i++) {
       circle(this.pos.x - w/2 + seg/2 + i*seg, this.pos.y + h*0.35, seg*0.6);
     }
 
-    // eyes + mouth
+    // face
     fill(30);
     circle(this.pos.x - w*0.2, this.pos.y - h*0.25, w*0.15);
     circle(this.pos.x + w*0.2, this.pos.y - h*0.25, w*0.15);
-
     noFill(); stroke(30); strokeWeight(3);
     arc(this.pos.x, this.pos.y - h*0.05, w*0.3, w*0.2, 0, PI);
 
     pop();
 
-    // milestone popup
+    // milestone popup (only at thresholds)
     if (this.milestoneTimer > 0) {
       fill(255, 230, 90);
       noStroke();
@@ -73,7 +67,6 @@ class Ball {
     }
   }
 
-  bounce() { this.bounceVel = -10; }
   resetBounce() { this.bounceVel = 0; }
 
   showMilestone(msg) {
