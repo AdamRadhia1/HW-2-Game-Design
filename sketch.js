@@ -1,248 +1,263 @@
-let player, road;
+// =====================
+// 🎃 GHOST RUNNER GAME
+// =====================
+
+// Audio
+let bgMusic, laughSfx;
+
+// Game objects
+let player;
+let road;
 let obstacles = [];
 
+// Game state
+let gameStarted = false;
+let countdown = 5;
+let gameOver = false;
+let paused = false;
+
+// Progress
 let baseSpeed = 5;
 let speed = baseSpeed;
 let distance = 0;
-let spawnRate = 60;
-
-let gameOver = false;
-let paused = false;
-let startSequence = true;
-
-let countdown = 5;
-let lastSecond = 0;
-let startTimeMs = 0;
-
-let nightFade = 0;
 let score = 0;
-let nextMilestone = 20;
-let flashAlpha = 0;
-let shakeTimer = 0;
+
+// Darkness cycle
+let nightFade = 0;
+let nightTimer = 0;
+
+// MJ jumpscare
+let mjImg;
 let fadeAlpha = 0;
 let mjStarted = false;
 
-let clouds = [];
-let stars = [];
-
-let bgMusic, laughSfx, mjImg;
+// Touch control memory
+let touchXPos = null;
 
 function preload() {
-  mjImg   = loadImage("assets/Michael Jackson Thriller.png");
   bgMusic = loadSound("assets/Tame Impala - Dracula Instrumental.mp3");
-  laughSfx= loadSound("assets/Mojo jojo.mp3");
+  laughSfx = loadSound("assets/Mojo jojo.mp3");
+  mjImg = loadImage("assets/Michael Jackson Thriller.png");
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  pixelDensity(1);
-  userStartAudio();
 
-  player = new Ball(width/2, height - 100);
-  road   = new Road();
+  road = new Road();
+  player = new Ball(width/2, height - 120);
 
-  for (let i = 0; i < 6; i++) {
-    clouds.push(new Cloud(random(width), random(50, 250), random(0.3, 1)));
+  textFont("Arial");
+
+  setInterval(() => {
+    if (!gameStarted && countdown > 0) countdown--;
+  }, 1000);
+}
+
+function startGameMusic() {
+  if (!bgMusic.isPlaying()) {
+    bgMusic.setVolume(0);
+    bgMusic.loop();
+    let v = 0;
+    let fade = setInterval(() => {
+      v += 0.03;
+      bgMusic.setVolume(v);
+      if (v >= 1) clearInterval(fade);
+    }, 80);
   }
-  for (let i = 0; i < 120; i++) {
-    stars.push(createVector(random(width), random(height/2), random(1,3)));
-  }
-
-  startTimeMs = millis();
 }
 
 function draw() {
-  // Day -> Night -> Day cycle ~60s
-  const t = (millis() - startTimeMs) % 60000;
-  nightFade = (t < 30000) ? map(t,0,30000,0,1) : map(t,30000,60000,1,0);
 
-  const r = lerp(233, 40, nightFade);
-  const g = lerp(215, 30, nightFade);
-  const b = lerp(255, 60, nightFade);
-  background(r, g, b);
-
-  drawStars();
-  drawClouds();
-
-  if (paused && !gameOver && !startSequence) {
-    road.display();
+  // ==============
+  // COUNTDOWN SCREEN
+  // ==============
+  if (!gameStarted) {
+    background(50);
+    textAlign(CENTER, CENTER);
     fill(255);
-    for (let o of obstacles) ellipse(o.x, o.y, 30, 30);
-    player.display();
-    drawHUD();
-    pauseOverlay();
+    textSize(60);
+    if (countdown > 0) {
+      text(countdown, width/2, height/2);
+    } else {
+      text("GO!", width/2, height/2);
+      startGameMusic();
+      setTimeout(() => { gameStarted = true; }, 600);
+    }
     return;
   }
 
-  let shakeX=0, shakeY=0;
-  if (shakeTimer>0){ shakeX=random(-5,5); shakeY=random(-5,5); shakeTimer--; }
-  push(); translate(shakeX, shakeY);
-
-  if(!gameOver){
-    road.update();
-    road.display();
-
-    if(!startSequence){
-      distance += speed * 0.1;
-      speed = baseSpeed + distance / 300.0;
-      spawnRate = int(60 - min(distance/30, 40));
-
-      if(frameCount % max(spawnRate,10)==0){
-        obstacles.push(createVector(random(road.leftGutterX+6, road.rightGutterX-6), -20));
-      }
-
-      fill(255);
-      for(let i=obstacles.length-1;i>=0;i--){
-        let o=obstacles[i];
-        o.y += speed;
-        ellipse(o.x, o.y, 30, 30);
-        if(dist(player.pos.x, player.pos.y, o.x, o.y) < player.radius/2 + 15){
-          triggerMJ();
-        }
-        if(o.y > height+20) obstacles.splice(i,1);
-      }
-
-      score++;
-      if(score >= nextMilestone){
-        player.showMilestone("GOOD JOB!");
-        nextMilestone += 20;
-      }
-    }
-
-    player.update(road);
-    player.display();
-    drawHUD();
-
-  } else {
-    drawGameOver();
+  // Pause
+  if (paused && !gameOver) {
+    drawPausedScreen();
+    return;
   }
 
-  if(startSequence) drawCountdown();
+  // Game Background + Night Cycle
+  nightTimer += deltaTime / 1000;
+  nightFade = (sin(nightTimer * 0.4) + 1) / 2; // smooth fade in/out
+  background(170 * (1-nightFade), 150 * (1-nightFade), 200);
 
-  if(flashAlpha>0){
-    fill(255,120,0,flashAlpha);
-    rect(0,0,width,height);
-    flashAlpha-=10;
-  }
+  road.update();
+  road.display();
 
-  pop();
+  updateObstacles();
+  drawObstacles();
+
+  player.update();
+  glowGhost();
+  player.display();
+
+  drawHUD();
+
+  if (gameOver) drawGameOverScreen();
 }
 
-function drawHUD(){
-  if(!startSequence){
-    fill(255); textSize(min(width,height)*0.04);
-    textAlign(LEFT,TOP);
-    text("Score: "+score, 20, 16);
-  }
-}
-
-function drawCountdown(){
-  let secs = int((millis()-startTimeMs)/1000);
-  if(secs>lastSecond){ lastSecond=secs; countdown--; }
-
+function drawHUD() {
   fill(255);
-  textAlign(CENTER,CENTER);
-  textSize(min(width,height)*0.18);
-  if(countdown>0){
-    text(countdown, width/2, height/2 - 40);
-    fadeInMusic();  // start fade-in DURING countdown
-  } else {
-    text("GO!", width/2, height/2 - 40);
-    fadeInMusic();
-    if(millis() - startTimeMs > 1000 * (lastSecond + 0.3)){
-      startSequence=false;
+  textSize(22);
+  textAlign(LEFT, TOP);
+  text("Score: " + score, 20, 20);
+
+  // GOOD JOB milestone every +20 points
+  if (score > 0 && score % 20 === 0) {
+    textAlign(CENTER);
+    fill(255, 215, 0);
+    textSize(28);
+    text("GOOD JOB!", width/2, player.pos.y - 80);
+  }
+}
+
+function updateObstacles() {
+  if (gameOver) return;
+
+  distance += speed * 0.1;
+  speed = baseSpeed + distance / 300;
+  let spawnRate = max(12, 60 - distance / 30);
+
+  if (frameCount % int(spawnRate) === 0) {
+    obstacles.push(createVector(random(road.leftGutterX + 10, road.rightGutterX - 10), -20));
+  }
+}
+
+function drawObstacles() {
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    let o = obstacles[i];
+    o.y += speed;
+
+    fill(0);
+    ellipse(o.x, o.y, 30, 30);
+
+    if (dist(player.pos.x, player.pos.y, o.x, o.y) < player.radius*0.6 + 15) {
+      triggerMJ();
     }
+
+    if (o.y > height + 40) obstacles.splice(i, 1);
   }
 }
 
-function fadeInMusic(){
-  if(!bgMusic.isPlaying()){
-    bgMusic.setVolume(0);
-    bgMusic.loop();
+function glowGhost() {
+  if (nightFade > 0.6) {
+    push();
+    noStroke();
+    fill(255, 255, 255, 120 * nightFade);
+    ellipse(player.pos.x, player.pos.y, player.radius*2);
+    pop();
   }
-  let current = bgMusic.getVolume();
-  let target = 0.35;
-  if(current<target) bgMusic.setVolume(current+0.01);
 }
 
-function triggerMJ(){
-  gameOver=true;
-  shakeTimer=25;
-  flashAlpha=180;
+// =============
+// PAUSE
+// =============
+
+function drawPausedScreen() {
+  road.display();
+  drawObstacles();
+  player.display();
+  fill(255);
+  textSize(40);
+  textAlign(CENTER,CENTER);
+  text("PAUSED", width/2, height/2 - 20);
+  textSize(20);
+  text("Press SPACE to Resume", width/2, height/2 + 20);
 }
 
-function drawGameOver(){
-  fadeAlpha = min(255, fadeAlpha+6);
-  fill(0,fadeAlpha); rect(0,0,width,height);
+// =============
+// MJ JUMPSCARE
+// =============
 
-  let mjAlpha = map(fadeAlpha,80,255,0,255);
-  tint(255,mjAlpha);
-  let w = width*0.8;
-  let h = w*(mjImg.height/mjImg.width);
-  image(mjImg, (width-w)/2, (height-h)/2, w, h);
-  noTint();
+function triggerMJ() {
+  if (gameOver) return;
+  gameOver = true;
+  obstacles = [];
+  fadeAlpha = 0;
+  mjStarted = false;
+}
 
-  if(!mjStarted){
+function drawGameOverScreen() {
+
+  fadeAlpha += 5;
+  fill(0, fadeAlpha);
+  rect(0,0,width,height);
+
+  if (!mjStarted) {
     laughSfx.play();
-    mjStarted=true;
+    mjStarted = true;
   }
 
-  if(!laughSfx.isPlaying() && fadeAlpha>=255){
+  if (mjImg) {
+    push();
+    tint(255, map(fadeAlpha, 80, 255, 0, 255, true));
+    let w = width * 0.8;
+    let h = w * (mjImg.height / mjImg.width);
+    image(mjImg, width/2 - w/2, height/2 - h/2, w, h);
+    pop();
+  }
+
+  if (fadeAlpha > 255) {
     fill(255);
     textAlign(CENTER);
-    textSize(min(width,height)*0.06);
-    text("Happy Halloween, try again!", width/2, height/2+40);
-    textSize(min(width,height)*0.04);
-    text("Press SPACE to Restart", width/2, height/2+80);
+    textSize(32);
+    text("Happy Halloween, Try Again!", width/2, height/2 + 40);
+    textSize(20);
+    text("Press SPACE to Restart", width/2, height/2 + 80);
   }
 }
 
-function pauseOverlay(){
-  fill(0,150); rect(0,0,width,height);
-  fill(255);
-  textAlign(CENTER,CENTER);
-  textSize(min(width,height)*0.08);
-  text("PAUSED", width/2, height/2);
-}
+// =============
+// CONTROLS
+// =============
 
-function keyPressed(){
-  if(key===' '){
-    if(gameOver) resetGame();
-    else if(!startSequence) paused=!paused;
+function keyPressed() {
+  if (key === ' ') {
+    if (gameOver) resetGame();
+    else paused = !paused;
   }
 }
 
-function resetGame(){
-  gameOver=false; paused=false; startSequence=true;
-  countdown=5; lastSecond=0;
-  distance=0; score=0; nextMilestone=20;
-  obstacles=[];
-  player.pos.set(width/2, height-100);
-  player.resetBounce();
-  mjStarted=false; fadeAlpha=0;
-  startTimeMs=millis(); nightFade=0;
-  bgMusic.setVolume(0.35);
+function touchStarted() {
+  if (!gameStarted && countdown <= 0) startGameMusic();
+  if (gameOver) { resetGame(); return; }
+  paused = !paused;
 }
 
-function drawStars(){
-  if(nightFade>0.3){
-    fill(255, map(nightFade,0.3,1,0,255));
-    noStroke();
-    for(let s of stars) circle(s.x,s.y,s.z);
-  }
+function mouseMoved() { touchXPos = mouseX; }
+function touchMoved() {
+  if (touches.length > 0) player.pos.x = touches[0].x;
 }
 
-function drawClouds(){
-  if(nightFade<0.8){
-    for(let c of clouds){ c.update(); c.display(); }
-  }
-}
+// =============
+// RESET
+// =============
 
-function windowResized(){
-  resizeCanvas(windowWidth, windowHeight);
+function resetGame() {
+  gameOver = false;
+  paused = false;
+  score = 0;
+  distance = 0;
+  speed = baseSpeed;
+  obstacles = [];
+  fadeAlpha = 0;
+  nightTimer = 0;
+  mjStarted = false;
+  player.pos = createVector(width/2, height - 120);
 }
-
-function isMobile(){
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
